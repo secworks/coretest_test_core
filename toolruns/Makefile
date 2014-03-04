@@ -37,16 +37,17 @@
 #===================================================================
 
 UART_SRC=../../uart/src/rtl/uart.v ../../uart/src/rtl/uart_core.v
-TEST_CORE_SRC=../../test_core/src/rtl/test_core.v
 CORETEST_SRC=../../coretest/src/rtl/coretest.v
+TEST_CORE_SRC=../../test_core/src/rtl/test_core.v
+TEST_SRC=../src/rtl/coretest_test_core.v
 
 CC=iverilog
 
 all: tester
 
 
-tester:  $(UART_SRC) $(TEST_CORE_SRC)  $(CORETEST_SRC)
-	$(CC) -o tester.sim $(UART_SRC) $(TEST_CORE_SRC)  $(CORETEST_SRC)
+tester:	$(TEST_SRC) $(CORETEST_SRC) $(TEST_CORE_SRC) $(UART_SRC)
+	$(CC) -o tester.sim $(TEST_SRC) $(CORETEST_SRC) $(TEST_CORE_SRC) $(UART_SRC)
 
 sim-tester: tester.sim
 	./tester.sim
