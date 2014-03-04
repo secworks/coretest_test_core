@@ -39,25 +39,36 @@
 //======================================================================
 
 module coretest_test_core(
-                          input wire           clk,
-                          input wire           reset_n
+                          input wire          clk,
+                          input wire          reset_n,
  
                           // External interface.
                           input wire          rxd,
                           output wire         txd,
 
-                          output wire [7 : 0]  debug
+                          output wire [7 : 0] debug
                          );
 
   
   //----------------------------------------------------------------
   // Internal constant and parameter definitions.
   //----------------------------------------------------------------
-
+  parameter TEST_CORE_ADDR_PREFIX = 8'h01;
+  parameter UART_ADDR_PREFIX      = 8'h02;
+  
   
   //----------------------------------------------------------------
   // Wires.
   //----------------------------------------------------------------
+  // Coretest connections.
+  wire          coretest_reset;
+  wire          coretest_cs;
+  wire          coretest_we;
+  wire [15 : 0] coretest_address;
+  wire [31 : 0] coretest_write_data;
+  reg [31 : 0]  coretest_read_data;
+  reg           coretest_error;
+
   // uart connections
   wire          uart_rxd_syn;
   wire [7 : 0]  uart_rxd_data;
@@ -65,18 +76,30 @@ module coretest_test_core(
   wire          uart_txd_syn;
   wire [7 : 0]  uart_txd_data;
   wire          uart_txd_ack;
-  wire          uart_cs;
-  wire          uart_we;
-  wire [3 : 0]  uart_address;
-  wire [31 : 0] uart_write_data;
+  reg           uart_cs;
+  reg           uart_we;
+  reg [3 : 0]   uart_address;
+  reg [31 : 0]  uart_write_data;
   wire [31 : 0] uart_read_data;
   wire          uart_error;
-
+  wire [7 : 0]  uart_debug;
+  
+  // test_core connections.
+  reg           test_core_reset_n;
+  reg           test_core_cs;
+  reg           test_core_we;
+  reg [7 : 0]   test_core_address;
+  reg [31 : 0]  test_core_write_data;
+  wire [31 : 0] test_core_read_data;
+  wire          test_core_error;
+  wire [7 : 0]  test_core_debug;
+  
   
   //----------------------------------------------------------------
   // Concurrent assignment.
   //----------------------------------------------------------------
-
+  assign debug = test_core_debug;
+  
   
   //----------------------------------------------------------------
   // Core instantiations.
@@ -85,22 +108,22 @@ module coretest_test_core(
                     .clk(clk),
                     .reset_n(reset_n),
                          
-                    .rx_syn(uart_rx_syn),
-                    .rx_data(uart_rx_data),
-                    .rx_ack(uart_rx_ack),
+                    .rx_syn(uart_rxd_syn),
+                    .rx_data(uart_rxd_data),
+                    .rx_ack(uart_rxd_ack),
                     
-                    .tx_syn(uart_tx_syn),
-                    .tx_data(uart_tx_data),
-                    .tx_ack(uart_tx_ack),
+                    .tx_syn(uart_txd_syn),
+                    .tx_data(uart_txd_data),
+                    .tx_ack(uart_txd_ack),
                     
                     // Interface to the core being tested.
-                    .core_reset(coretest_core_reset),
-                    .core_cs(coretest_core_cs),
-                    .core_we(coretest_core_we),
-                    .core_address(coretest_core_address),
-                    .core_write_data(coretest_core_write_data),
-                    .core_read_data(coretest_core_read_data),
-                    .core_error(coretest_core_error)
+                    .core_reset(coretest_reset),
+                    .core_cs(coretest_cs),
+                    .core_we(coretest_we),
+                    .core_address(coretest_address),
+                    .core_write_data(coretest_write_data),
+                    .core_read_data(coretest_read_data),
+                    .core_error(coretest_error)
                    );
 
 
@@ -108,46 +131,41 @@ module coretest_test_core(
             .clk(clk),
             .reset_n(reset_n),
             
-            // External interface.
             .rxd(rxd),
             .txd(txd),
 
-            // Internal receive interface.
-            .rxd_syn(),
-            .rxd_data(),
-            .rxd_ack(),
+            .rxd_syn(uart_rxd_syn),
+            .rxd_data(uart_rxd_data),
+            .rxd_ack(uart_rxd_ack),
 
-            // Internal transmit interface.
-            .txd_syn(),
-            .txd_data(),
-            .txd_ack(),
+            .txd_syn(uart_txd_syn),
+            .txd_data(uart_txd_data),
+            .txd_ack(uart_txd_ack),
             
-            // API interface.
-            .cs(),
-            .we(),
-            .address(),
-            .write_data(),
-            .read_data(),
-            .error(),
+            .cs(uart_cs),
+            .we(uart_we),
+            .address(uart_address),
+            .write_data(uart_write_data),
+            .read_data(uart_read_data),
+            .error(uart_error),
 
-            // Debug output.
-            .debug()
+            .debug(uart_debug)
            );
 
   
-  test_core core(
-                 .clk(),
-                 .reset_n(),
-                 
-                 .cs(),
-                 .we(),
-                 .address(),
-                 .write_data(),
-                 .read_data(),
-                 .error(),
-                 
-                 .debug()
-                );
+  test_core test_core(
+                      .clk(clk),
+                      .reset_n(test_core_reset_n),
+                      
+                      .cs(test_core_cs),
+                      .we(test_core_we),
+                      .address(test_core_address),
+                      .write_data(test_core_write_data),
+                      .read_data(test_core_read_data),
+                      .error(test_core_error),
+                      
+                      .debug(test_core_debug)
+                     );
 
   
   //----------------------------------------------------------------
@@ -159,7 +177,47 @@ module coretest_test_core(
   always @*
     begin : address_mux
       // Default assignments.
-      
+      coretest_read_data   = 32'h00000000;
+      coretest_error       = 0;
+
+      uart_cs              = 0;
+      uart_we              = 0;
+      uart_address         = 4'h0;
+      uart_write_data      = 32'h00000000;
+
+      test_core_reset_n    = 1;
+      test_core_cs         = 0;
+      test_core_we         = 0;
+      test_core_address    = 8'h00;
+      test_core_write_data = 32'h00000000;
+
+      case (coretest_address[15 : 8])
+        TEST_CORE_ADDR_PREFIX:
+          begin
+            test_core_reset_n    = coretest_reset;
+            test_core_cs         = coretest_cs;
+            test_core_we         = coretest_we;
+            test_core_address    = coretest_address[7 : 0];
+            test_core_write_data = coretest_write_data;
+            coretest_read_data   = test_core_read_data;
+            coretest_error       = test_core_error;
+          end
+
+        
+        UART_ADDR_PREFIX:
+          begin
+            uart_cs            = coretest_cs;
+            uart_we            = coretest_we;
+            uart_address       = coretest_address[3 : 0];
+            uart_write_data    = coretest_write_data;
+            coretest_read_data = uart_read_data;
+            coretest_error     = uart_error;
+          end
+        
+        default:
+          begin
+          end
+      endcase // case (coretest_address[15 : 8])
     end // address_mux
   
 endmodule // coretest_test_core
