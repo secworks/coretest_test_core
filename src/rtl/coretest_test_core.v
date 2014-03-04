@@ -98,7 +98,8 @@ module coretest_test_core(
   //----------------------------------------------------------------
   // Concurrent assignment.
   //----------------------------------------------------------------
-  assign debug = test_core_debug;
+//  assign debug = test_core_debug;
+  assign debug = uart_debug;
   
   
   //----------------------------------------------------------------
@@ -221,3 +222,7 @@ module coretest_test_core(
     end // address_mux
   
 endmodule // coretest_test_core
+
+//======================================================================
+// EOF coretest_test_core.v
+//======================================================================
