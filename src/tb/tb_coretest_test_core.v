@@ -81,32 +81,19 @@ module tb_coretest_test_core();
   //----------------------------------------------------------------
   // Device Under Test.
   //----------------------------------------------------------------
-  uart dut(
-           .clk(tb_clk),
-           .reset_n(tb_reset_n),
+  coretest_test_core dut(
+                         .clk(tb_clk),
+                         .reset_n(tb_reset_n),
            
-           .rxd(tb_rxd),
-           .txd(tb_txd),
-           
-           .rxd_syn(tb_rxd_syn),
-           .rxd_data(tb_rxd_data),
-           .rxd_ack(tb_rxd_ack),
-           
-           // Internal transmit interface.
-           .txd_syn(tb_txd_syn),
-           .txd_data(tb_txd_data),
-           .txd_ack(tb_tcd_ack),
-
-           .debug(tb_debug)
-          );
+                         .rxd(tb_rxd),
+                         .txd(tb_txd),
+                         
+                         .debug(tb_debug)
+                        );
 
   //----------------------------------------------------------------
   // Concurrent assignments.
   //----------------------------------------------------------------
-  // We connect the so called internal ports on the dut together.
-  assign tb_txd_syn  = tb_rxd_syn;
-  assign tb_txd_data = tb_rxd_data;
-  assign tb_rxd_ack  = tb_txd_ack;
   
 
   //----------------------------------------------------------------
@@ -126,12 +113,6 @@ module tb_coretest_test_core();
   always
     begin : sys_monitor
       #(CLK_PERIOD);      
-      if (DEBUG)
-        begin
-          dump_rx_state();
-          dump_tx_state();
-          $display("");
-        end
       if (VERBOSE)
         begin
           $display("cycle: 0x%016x", cycle_ctr);
@@ -170,58 +151,9 @@ module tb_coretest_test_core();
     begin
       $display("State of DUT");
       $display("------------");
-      $display("Inputs and outputs:");
-      $display("rxd = 0x%01x, txd = 0x%01x,", 
-               dut.core.rxd, dut.core.txd);
-      $display("");
-
-      $display("Sample and data registers:");
-      $display("rxd_reg = 0x%01x, rxd_byte_reg = 0x%01x", 
-               dut.core.rxd_reg, dut.core.rxd_byte_reg);
-      $display("");
-
-      $display("Counters:");
-      $display("rxd_bit_ctr_reg = 0x%01x, rxd_bitrate_ctr_reg = 0x%02x", 
-               dut.core.rxd_bit_ctr_reg, dut.core.rxd_bitrate_ctr_reg);
-      $display("");
-      
-
-      $display("Control signals and FSM state:");
-      $display("erx_ctrl_reg = 0x%02x", 
-               dut.core.erx_ctrl_reg);
       $display("");
     end
-  endtask // dump_dut_state
-  
-
-  
-  //----------------------------------------------------------------
-  // dump_rx_state()
-  //
-  // Dump the state of the rx engine.
-  //----------------------------------------------------------------
-  task dump_rx_state();
-    begin
-      $display("rxd = 0x%01x, rxd_reg = 0x%01x, rxd_byte_reg = 0x%01x, rxd_bit_ctr_reg = 0x%01x, rxd_bitrate_ctr_reg = 0x%02x, rxd_syn = 0x%01x, erx_ctrl_reg = 0x%02x", 
-               dut.core.rxd, dut.core.rxd_reg, dut.core.rxd_byte_reg, dut.core.rxd_bit_ctr_reg, 
-               dut.core.rxd_bitrate_ctr_reg, dut.core.rxd_syn, dut.core.erx_ctrl_reg);
-    end
-  endtask // dump_dut_state
-  
-
-  
-  //----------------------------------------------------------------
-  // dump_tx_state()
-  //
-  // Dump the state of the tx engine.
-  //----------------------------------------------------------------
-  task dump_tx_state();
-    begin
-      $display("txd = 0x%01x, txd_reg = 0x%01x, txd_byte_reg = 0x%01x, txd_bit_ctr_reg = 0x%01x, txd_bitrate_ctr_reg = 0x%02x, txd_ack = 0x%01x, etx_ctrl_reg = 0x%02x", 
-               dut.core.txd, dut.core.txd_reg, dut.core.txd_byte_reg, dut.core.txd_bit_ctr_reg, 
-               dut.core.txd_bitrate_ctr_reg, dut.core.txd_ack, dut.core.etx_ctrl_reg);
-    end
-  endtask // dump_dut_state
+  endtask // dump_dut_state  
 
   
   //----------------------------------------------------------------
@@ -273,20 +205,20 @@ module tb_coretest_test_core();
       // Start bit
       $display("*** Transmitting start bit.");
       tb_rxd = 0;
-      #(CLK_PERIOD * dut.core.DEFAULT_CLK_RATE);
+      #(CLK_PERIOD * dut.uart.DEFAULT_CLK_RATE);
       
       // Send the bits LSB first.
       for (i = 0 ; i < 8 ; i = i + 1)
         begin
           $display("*** Transmitting data[%1d] = 0x%01x.", i, data[i]);
           tb_rxd = data[i];
-          #(CLK_PERIOD * dut.core.DEFAULT_CLK_RATE);
+          #(CLK_PERIOD * dut.uart.DEFAULT_CLK_RATE);
         end
 
       // Send two stop bits. I.e. two bit times high (mark) value.
       $display("*** Transmitting two stop bits.");
       tb_rxd = 1;
-      #(2 * CLK_PERIOD * dut.core.DEFAULT_CLK_RATE * dut.core.DEFAULT_STOP_BITS);
+      #(2 * CLK_PERIOD * dut.uart.DEFAULT_CLK_RATE * dut.uart.DEFAULT_STOP_BITS);
       $display("*** End of transmission.");
     end
   endtask // transmit_byte
@@ -304,17 +236,17 @@ module tb_coretest_test_core();
 
       transmit_byte(data);
       
-      if (dut.core.rxd_byte_reg == data)
-        begin
-          $display("*** Correct data: 0x%01x captured by the dut.", 
-                   dut.core.rxd_byte_reg);
-        end
-      else
-        begin
-          $display("*** Incorrect data: 0x%01x captured by the dut Should be: 0x%01x.",
-                   dut.core.rxd_byte_reg, data);
-          error_ctr = error_ctr + 1;
-        end
+//      if (dut.core.rxd_byte_reg == data)
+//        begin
+//          $display("*** Correct data: 0x%01x captured by the dut.", 
+//                   dut.core.rxd_byte_reg);
+//        end
+//      else
+//        begin
+//          $display("*** Incorrect data: 0x%01x captured by the dut Should be: 0x%01x.",
+//                   dut.core.rxd_byte_reg, data);
+//          error_ctr = error_ctr + 1;
+//        end
     end
   endtask // check_transmit
   
@@ -326,11 +258,68 @@ module tb_coretest_test_core();
   //----------------------------------------------------------------
   task test_transmit();
     begin
+      // Send reset command.
+      $display("*** Sending reset command.");
+      check_transmit(8'h55);
+      check_transmit(8'h01);
+      check_transmit(8'haa);
+      
+      // Send read command.
+      $display("*** Sending Read command to CORE ID0 in test core.");
       check_transmit(8'h55);
       check_transmit(8'h10);
       check_transmit(8'h01);
       check_transmit(8'h00);
       check_transmit(8'haa);
+      
+      // Send read command.
+      $display("*** Sending Read command to CORE ID2 in test core.");
+      check_transmit(8'h55);
+      check_transmit(8'h10);
+      check_transmit(8'h01);
+      check_transmit(8'h01);
+      check_transmit(8'haa);
+      
+      // Send read command.
+      $display("*** Sending Read command to rw-register in test_core. 11223344.");
+      check_transmit(8'h55);
+      check_transmit(8'h10);
+      check_transmit(8'h01);
+      check_transmit(8'h10);
+      check_transmit(8'haa);
+
+      // Send write command.
+      $display("*** Sending Write command to rw-register in test_core. deadbeef.");
+      check_transmit(8'h55);
+      check_transmit(8'h11);
+      check_transmit(8'h01);
+      check_transmit(8'h10);
+      check_transmit(8'hde);
+      check_transmit(8'had);
+      check_transmit(8'hbe);
+      check_transmit(8'hef);
+      check_transmit(8'haa);
+      
+      // Send read command.
+      $display("*** Sending Read command to rw-register in test_core. deadbeef.");
+      check_transmit(8'h55);
+      check_transmit(8'h10);
+      check_transmit(8'h01);
+      check_transmit(8'h10);
+      check_transmit(8'haa);
+
+      // Send write command.
+      $display("*** Sending Write command to debug-register in test_core. 77.");
+      check_transmit(8'h55);
+      check_transmit(8'h11);
+      check_transmit(8'h01);
+      check_transmit(8'h20);
+      check_transmit(8'h00);
+      check_transmit(8'h00);
+      check_transmit(8'h00);
+      check_transmit(8'h77);
+      check_transmit(8'haa);
+
     end
   endtask // test_transmit
 
@@ -368,8 +357,10 @@ module tb_coretest_test_core();
       dump_dut_state();
 
       test_transmit();
+      $display("*** transmit done.");
 
-      #(1000 * CLK_PERIOD);
+      #(1000000 * CLK_PERIOD);
+      $display("*** Wait completed.");
       
       display_test_result();
       $display("*** Simulation done.");

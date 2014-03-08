@@ -61,7 +61,7 @@ module coretest_test_core(
   // Wires.
   //----------------------------------------------------------------
   // Coretest connections.
-  wire          coretest_reset;
+  wire          coretest_reset_n;
   wire          coretest_cs;
   wire          coretest_we;
   wire [15 : 0] coretest_address;
@@ -98,8 +98,7 @@ module coretest_test_core(
   //----------------------------------------------------------------
   // Concurrent assignment.
   //----------------------------------------------------------------
-//  assign debug = test_core_debug;
-  assign debug = uart_debug;
+  assign debug = test_core_debug;
   
   
   //----------------------------------------------------------------
@@ -118,7 +117,7 @@ module coretest_test_core(
                     .tx_ack(uart_txd_ack),
                     
                     // Interface to the core being tested.
-                    .core_reset(coretest_reset),
+                    .core_reset_n(coretest_reset_n),
                     .core_cs(coretest_cs),
                     .core_we(coretest_we),
                     .core_address(coretest_address),
@@ -156,7 +155,7 @@ module coretest_test_core(
   
   test_core test_core(
                       .clk(clk),
-                      .reset_n(test_core_reset_n),
+                      .reset_n(reset_n),
                       
                       .cs(test_core_cs),
                       .we(test_core_we),
@@ -195,7 +194,7 @@ module coretest_test_core(
       case (coretest_address[15 : 8])
         TEST_CORE_ADDR_PREFIX:
           begin
-            test_core_reset_n    = coretest_reset;
+            test_core_reset_n    = coretest_reset_n;
             test_core_cs         = coretest_cs;
             test_core_we         = coretest_we;
             test_core_address    = coretest_address[7 : 0];
