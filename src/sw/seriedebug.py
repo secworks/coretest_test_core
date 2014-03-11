@@ -75,12 +75,45 @@ def main():
     ser.writeTimeout=0
     ser.open()
 
-    # Read from rw-regise
-    my_cmd = ['\x55', '\x10', '\x01', '\x20', '\x00', '\x00', '\x00', '\x17', '\xaa']
+
+    # Read from rw-registers
+    print("Sending command to read from the debug register in the test core.")
+    my_cmd = ['\x55', '\x10', '\x01', '\x20', '\xaa']
     for tx_byte in my_cmd:
         ser.write(tx_byte)
 
-    for i in range(8):
+    print("Getting the response.")
+    for i in range(9):
+        response = ""
+        while not len(response):
+            response = ser.read()
+            if len(response):
+                print "received response: 0x%02x" % ord(response)
+
+
+    # Write to rw-registers
+    print("Sending command for writing to debug register in the test core.")
+    my_cmd = ['\x55', '\x11', '\x01', '\x20', '\x00', '\x00', '\x00', '\x17', '\xaa']
+    for tx_byte in my_cmd:
+        ser.write(tx_byte)
+
+    print("Getting the response.")
+    for i in range(5):
+        response = ""
+        while not len(response):
+            response = ser.read()
+            if len(response):
+                print "received response: 0x%02x" % ord(response)
+
+
+    # Read from rw-registers
+    print("Sending command to read from the debug register in the test core.")
+    my_cmd = ['\x55', '\x10', '\x01', '\x20', '\xaa']
+    for tx_byte in my_cmd:
+        ser.write(tx_byte)
+
+    print("Getting the response.")
+    for i in range(9):
         response = ""
         while not len(response):
             response = ser.read()
