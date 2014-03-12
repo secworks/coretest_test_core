@@ -105,10 +105,9 @@ def print_response(buffer):
 # collect response from coretest.
 #-------------------------------------------------------------------
 def read_serial_thread(serialport):
-    print "Serial port response thread started."
-    print "Waiting for response..."
-    
-    count = 0
+    if VERBOSE:
+        print "Serial port response thread started. Waiting for response..."
+        
     buffer = []
     while not done:
         response = serialport.read()
@@ -133,37 +132,42 @@ def main():
     ser.stopbits=1
     ser.timeout=1
     ser.writeTimeout=0
-    ser.open()
-    done = False
+
+    if VERBOSE:
+        print "Opening serial device."
+    try:
+        ser.open()
+    except:
+        print "Error: Can't open serial device."
+        sys.exit(1)
+
+    if VERBOSE:
+        print "Starting thread."
 
     # Try to create a thread
     try:
-        my_thread = threading.Thread(target=read_serial_thread, args=(ser))
+        my_thread = threading.Thread(target=read_serial_thread, args=(ser,))
     except:
         print "Error: Can't start thread."
         sys.exit()
         
-    print type(my_thread)
-    print dir(my_thread)
+    my_thread.daemon = True
     my_thread.start()
 
     # Send the command sequence.
-#    for i in range (16):
-#        print "Sending write command: address 0x0120 = 0x%02x." % i
-#        my_cmd = ['\x55', '\x11', '\x01', '\x20', '\x00', '\x00', '\x00']
-#        my_cmd.append(chr(i))
-#        my_cmd.append('\xaa')
-#        for tx_byte in my_cmd:
-#            ser.write(tx_byte)
-#            time.sleep(0.05)
-
-    done = True
-    my_thread.exit()
-    ser.close()
+    for i in range (16):
+        print "Sending write command: address 0x0120 = 0x%02x." % i
+        my_cmd = ['\x55', '\x11', '\x01', '\x20', '\x00', '\x00', '\x00']
+        my_cmd.append(chr(i))
+        my_cmd.append('\xaa')
+        for tx_byte in my_cmd:
+            ser.write(tx_byte)
+            time.sleep(0.05)
     
     # Exit nicely.
     if VERBOSE:
         print "Done. Closing device."
+    ser.close()
 
 
 #-------------------------------------------------------------------
