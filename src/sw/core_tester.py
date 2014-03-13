@@ -61,7 +61,7 @@ VERBOSE = False
 SOC                   = '\x55'
 EOC                   = '\xaa'
 READ_CMD              = '\x10'
-WRITE_CMD             = '\x10'
+WRITE_CMD             = '\x11'
 TEST_CORE_ADDR_PREFIX = '\x01'
 UART_ADDR_PREFIX      = '\x02'
 NAME0_ADDR            = '\x00'
@@ -135,9 +135,12 @@ def read_serial_thread(serialport):
 #
 # Send the bytes in the buffer to coretest over the serial port.
 #-------------------------------------------------------------------
-def write_serial_bytes(buffer, serialport):
-    for tx_byte in buffer:
-        ser.write(tx_byte)
+def write_serial_bytes(tx_cmd, serialport):
+    if VERBOSE:
+        print "Command to be sent:", tx_cmd
+        
+    for tx_byte in tx_cmd:
+        serialport.write(tx_byte)
 
     
 #-------------------------------------------------------------------
@@ -176,43 +179,43 @@ def main():
 
     # TC1: Read name, type and version from test_core:
     print "TC1: Reading name, type and version words from test_core."
-    my_buffer = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, NAME0_ADDR, EOC]
-    write_serial_bytes(buffer, ser)
-    my_buffer = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, NAME1_ADDR, EOC]
-    write_serial_bytes(buffer, ser)
-    my_buffer = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, TYPE_ADDR, EOC]
-    write_serial_bytes(buffer, ser)
-    my_buffer = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, VERSION_ADDR, EOC]
-    write_serial_bytes(buffer, ser)
+    my_cmd = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, NAME0_ADDR, EOC]
+    write_serial_bytes(my_cmd, ser)
+    my_cmd = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, NAME1_ADDR, EOC]
+    write_serial_bytes(my_cmd, ser)
+    my_cmd = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, TYPE_ADDR, EOC]
+    write_serial_bytes(my_cmd, ser)
+    my_cmd = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, VERSION_ADDR, EOC]
+    write_serial_bytes(my_cmd, ser)
 
     
     # TC2: Read id0, id1 and version from test_core:
     print "TC2: Reading id and version words from uart."
-    my_buffer = [SOC, READ_CMD, UART_ADDR_PREFIX, NAME0_ADDR, EOC]
-    write_serial_bytes(buffer, ser)
-    my_buffer = [SOC, READ_CMD, UART_ADDR_PREFIX, NAME1_ADDR, EOC]
-    write_serial_bytes(buffer, ser)
-    my_buffer = [SOC, READ_CMD, UART_ADDR_PREFIX, TYPE_ADDR, EOC]
-    write_serial_bytes(buffer, ser)
-    my_buffer = [SOC, READ_CMD, UART_ADDR_PREFIX, VERSION_ADDR, EOC]
-    write_serial_bytes(buffer, ser)
+    my_cmd = [SOC, READ_CMD, UART_ADDR_PREFIX, NAME0_ADDR, EOC]
+    write_serial_bytes(my_cmd, ser)
+    my_cmd = [SOC, READ_CMD, UART_ADDR_PREFIX, NAME1_ADDR, EOC]
+    write_serial_bytes(my_cmd, ser)
+    my_cmd = [SOC, READ_CMD, UART_ADDR_PREFIX, TYPE_ADDR, EOC]
+    write_serial_bytes(my_cmd, ser)
+    my_cmd = [SOC, READ_CMD, UART_ADDR_PREFIX, VERSION_ADDR, EOC]
+    write_serial_bytes(my_cmd, ser)
 
     
     # TC3: Read, write and read from the RW register in the test core.
     print "TC3: Reading, writing and reading from the RW register in the test core."
-    my_buffer = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG, EOC]
-    write_serial_bytes(buffer, ser)
+    my_cmd = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG, EOC]
+    write_serial_bytes(my_cmd, ser)
     test_pattern = ['\xde', '\xad', '\xbe', '\xef']
-    my_buffer = [SOC, WRITE_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG] + test_pattern + [EOC]
-    write_serial_bytes(buffer, ser)
-    my_buffer = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG, EOC]
-    write_serial_bytes(buffer, ser)
+    my_cmd = [SOC, WRITE_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG] + test_pattern + [EOC]
+    write_serial_bytes(my_cmd, ser)
+    my_cmd = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG, EOC]
+    write_serial_bytes(my_cmd, ser)
 
 
     # TC4: Write a sequence of words to the debug registers. This should be visible on the leds."
     for i in range (0, 255, 7):
         print "Sending write command: address 0x0120 = 0x%02x." % i
-        my_cmd = [SOC, WRITE_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_DEBUG_REG] + chr(i) + [EOC]
+        my_cmd = [SOC, WRITE_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_DEBUG_REG] + [chr(i)] + [EOC]
         for tx_byte in my_cmd:
             ser.write(tx_byte)
             time.sleep(0.01)
