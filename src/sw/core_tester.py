@@ -138,10 +138,13 @@ def read_serial_thread(serialport):
 def write_serial_bytes(tx_cmd, serialport):
     if VERBOSE:
         print "Command to be sent:", tx_cmd
-        
+    
     for tx_byte in tx_cmd:
         serialport.write(tx_byte)
 
+    # Allow the device to complete the transaction.
+    time.sleep(0.1)
+    
     
 #-------------------------------------------------------------------
 # main()
@@ -201,8 +204,8 @@ def main():
     write_serial_bytes(my_cmd, ser)
 
     
-    # TC3: Read, write and read from the RW register in the test core.
-    print "TC3: Reading, writing and reading from the RW register in the test core."
+    # TC3: Read, write, read and write again from the RW register in the test core.
+    print "TC3: Read, write, read and write again from the RW register in the test core."
     my_cmd = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG, EOC]
     write_serial_bytes(my_cmd, ser)
     test_pattern = ['\xde', '\xad', '\xbe', '\xef']
@@ -210,12 +213,18 @@ def main():
     write_serial_bytes(my_cmd, ser)
     my_cmd = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG, EOC]
     write_serial_bytes(my_cmd, ser)
+    test_pattern = ['\x13', '\x37', '\xfe', '\xed']
+    my_cmd = [SOC, WRITE_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG] + test_pattern + [EOC]
+    write_serial_bytes(my_cmd, ser)
+    my_cmd = [SOC, READ_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_RW_REG, EOC]
+    write_serial_bytes(my_cmd, ser)
 
 
     # TC4: Write a sequence of words to the debug registers. This should be visible on the leds."
-    for i in range (0, 255, 7):
-        print "Sending write command: address 0x0120 = 0x%02x." % i
-        my_cmd = [SOC, WRITE_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_DEBUG_REG] + [chr(i)] + [EOC]
+    for i in range (0, 256, 7):
+        print "Sending write command: address 0x0120 = 0x%08x." % i
+        my_cmd = [SOC, WRITE_CMD, TEST_CORE_ADDR_PREFIX, TEST_CORE_DEBUG_REG] +\
+                 ['\x00', '\x00', '\x00'] + [chr(i)] + [EOC]
         for tx_byte in my_cmd:
             ser.write(tx_byte)
             time.sleep(0.01)
